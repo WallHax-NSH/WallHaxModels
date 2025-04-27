@@ -54,6 +54,7 @@ def main():
     ap.add_argument("--thr", type=float, default=0.3)
     args = ap.parse_args()
 
+    
     xyz = load_points(args.cloud)
     N = 20_000
     xyz = xyz[np.random.choice(len(xyz), N, replace=True)].astype("f4")
