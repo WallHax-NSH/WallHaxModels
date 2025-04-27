@@ -3,10 +3,10 @@ import numpy as np
 import json
 
 # Load point cloud
-pcd = o3d.io.read_point_cloud("data.ply")
+pcd = o3d.io.read_point_cloud("data_fixed.ply")
 
 # Load detections
-with open("3detr/detections.json") as f:
+with open("detections.json") as f:
     det = json.load(f)["det"]
 
 # Create Open3D geometries for boxes
@@ -27,5 +27,7 @@ for d in det:
     line_set.colors = o3d.utility.Vector3dVector(colors)
     box_geometries.append(line_set)
 
-# Visualize
+# Show interactive 3D window
+# You can use mouse to rotate, zoom, and pan
+# Press Q or ESC to close the window
 o3d.visualization.draw_geometries([pcd] + box_geometries)

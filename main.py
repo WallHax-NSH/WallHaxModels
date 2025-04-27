@@ -21,6 +21,11 @@ from utils.misc import my_worker_init_fn
 from utils.io import save_checkpoint, resume_if_possible
 from utils.logger import Logger
 
+from fastapi import FastAPI, File, UploadFile, Form
+from fastapi.responses import JSONResponse
+import tempfile, shutil
+from detector import run_detection
+
 
 def make_args_parser():
     parser = argparse.ArgumentParser("3D Detection Using Transformers", add_help=False)
@@ -432,3 +437,18 @@ if __name__ == "__main__":
     except RuntimeError:
         pass
     launch_distributed(args)
+
+app = FastAPI()
+
+@app.post("/detect")
+async def detect(
+    cloud: UploadFile = File(...),
+    thr: float = Form(0.3),
+    masked: bool = Form(False)
+):
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cloud_path = os.path.join(tmpdir, cloud.filename)
+        with open(cloud_path, "wb") as f:
+            shutil.copyfileobj(cloud.file, f)
+        result = run_detection(cloud_path, thr=thr, masked=masked)
+    return JSONResponse(result)
