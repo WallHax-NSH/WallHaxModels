@@ -15,38 +15,39 @@ async def send_detection_json_to_producer(detection_json: dict):
 
 @app.websocket("/ws/consumer/plyStream")
 async def ply_stream_consumer(websocket: WebSocket):
-    await websocket.accept()
-    ply_chunks = []
-    tmp_path = None
-    try:
-        while True:
-            chunk = await websocket.receive_text()
-            if chunk == "__END__":
-                break
-            ply_chunks.append(chunk)
-        # Reassemble file
-        ply_data = "".join(ply_chunks)
-        with tempfile.NamedTemporaryFile(delete=False, mode="w", encoding="utf-8") as tmp:
-            tmp.write(ply_data)
-            tmp_path = tmp.name
-        # Run detection
-        result = run_detection(
-            tmp_path,
-            "threedetr/checkpoints/sunrgbd_masked_ep1080.pth",
-            masked=True
-        )
-        os.unlink(tmp_path)
-        # Send the full detection JSON to the producer WebSocket
-
-        print(result)
-        #await send_detection_json_to_producer(result)
-        await websocket.send_json(result)
-    except Exception as e:
-        if tmp_path and os.path.exists(tmp_path):
+    uri = "ws://192.168.5.232:8000/ws/consumer/plyStream"
+    async with websockets.connect(uri) as ws:
+        ply_chunks = []
+        tmp_path = None
+        try:
+            while True:
+                chunk = await ws.recv()
+                if chunk == "__END__":
+                    break
+                ply_chunks.append(chunk)
+            # Reassemble file
+            ply_data = "".join(ply_chunks)
+            with tempfile.NamedTemporaryFile(delete=False, mode="w", encoding="utf-8") as tmp:
+                tmp.write(ply_data)
+                tmp_path = tmp.name
+            # Run detection
+            result = run_detection(
+                tmp_path,
+                "threedetr/checkpoints/sunrgbd_masked_ep1080.pth",
+                masked=True
+            )
             os.unlink(tmp_path)
-        await websocket.send_json({"error": str(e)})
-    finally:
-        await websocket.close()
+            # Send the full detection JSON to the producer WebSocket
+
+            print(result)
+            #await send_detection_json_to_producer(result)
+            await ws.send(json.dumps(result))
+        except Exception as e:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            await ws.send(json.dumps({"error": str(e)}))
+        finally:
+            await ws.close()
 
 if __name__ == "__main__":
     import uvicorn
