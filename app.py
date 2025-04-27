@@ -7,7 +7,7 @@ import tempfile
 # Add 3detr directory to sys.path for imports
 # sys.path.append(os.path.join(os.path.dirname(__file__), '3detr'))
 # from detepython -m 3detr.run 3detr/data_fixed.ply 3detr/checkpoints/sunrgbd_masked_ep1080.pth --maskedctor import run_detection
-from 3detr.infer_api import run_detection
+from threedetr.infer_api import run_detection
 
 app = FastAPI()
 
@@ -23,7 +23,7 @@ async def infer(file: UploadFile = File(...)):
         # Run detection on the temp file
         result = run_detection(
             tmp_path,
-            "3detr/checkpoints/sunrgbd_masked_ep1080.pth",
+            "threedetr/checkpoints/sunrgbd_masked_ep1080.pth",
             masked=True
         )
         # Clean up temp file
