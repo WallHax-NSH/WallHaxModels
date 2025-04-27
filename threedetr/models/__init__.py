@@ -2,7 +2,7 @@
 from .model_3detr import build_3detr
 
 MODEL_FUNCS = {
-    "threedetr": build_3detr,
+    "3detr": build_3detr,
 }
 
 def build_model(args, dataset_config):

@@ -10,7 +10,7 @@ import torch
 from torch.multiprocessing import set_start_method
 from torch.utils.data import DataLoader, DistributedSampler
 
-# 3DETR codebase specific imports (renamed to threedetr)
+# 3DETR codebase specific imports
 from .datasets import build_dataset
 from engine import evaluate, train_one_epoch
 from .models import build_model
@@ -45,10 +45,10 @@ def make_args_parser():
     ##### Model #####
     parser.add_argument(
         "--model_name",
-        default="threedetr",
+        default="3detr",
         type=str,
         help="Name of the model",
-        choices=["threedetr"],
+        choices=["3detr"],
     )
     ### Encoder
     parser.add_argument(

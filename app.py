@@ -1,42 +1,52 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, WebSocket
 import os
-import sys
 import tempfile
-
-# Add 3detr directory to sys.path for imports
-# sys.path.append(os.path.join(os.path.dirname(__file__), '3detr'))
-# from detepython -m 3detr.run 3detr/data_fixed.ply 3detr/checkpoints/sunrgbd_masked_ep1080.pth --maskedctor import run_detection
 from threedetr.infer_api import run_detection
+import asyncio
+import websockets
+import json
 
 app = FastAPI()
 
-@app.post("/infer")
-async def infer(file: UploadFile = File(...)):
-    # Create a temporary file
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        # Write uploaded file data to temp file
-        tmp.write(await file.read())
-        tmp_path = tmp.name
+async def send_detection_json_to_producer(detection_json: dict):
+    uri = "ws://192.168.5.232:8000/ws/producer/bounds"
+    async with websockets.connect(uri) as websocket:
+        await websocket.send(json.dumps(detection_json))
 
+@app.websocket("/ws/consumer/plyStream")
+async def ply_stream_consumer(websocket: WebSocket):
+    await websocket.accept()
+    ply_chunks = []
+    tmp_path = None
     try:
-        # Run detection on the temp file
+        while True:
+            chunk = await websocket.receive_text()
+            if chunk == "__END__":
+                break
+            ply_chunks.append(chunk)
+        # Reassemble file
+        ply_data = "".join(ply_chunks)
+        with tempfile.NamedTemporaryFile(delete=False, mode="w", encoding="utf-8") as tmp:
+            tmp.write(ply_data)
+            tmp_path = tmp.name
+        # Run detection
         result = run_detection(
             tmp_path,
             "threedetr/checkpoints/sunrgbd_masked_ep1080.pth",
             masked=True
         )
-        # Clean up temp file
         os.unlink(tmp_path)
-        return result
+        # Send the full detection JSON to the producer WebSocket
+
+        print(result)
+        #await send_detection_json_to_producer(result)
+        await websocket.send_json(result)
     except Exception as e:
-        # Clean up temp file on error
-        if os.path.exists(tmp_path):
+        if tmp_path and os.path.exists(tmp_path):
             os.unlink(tmp_path)
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+        await websocket.send_json({"error": str(e)})
+    finally:
+        await websocket.close()
 
 if __name__ == "__main__":
     import uvicorn
