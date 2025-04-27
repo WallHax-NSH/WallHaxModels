@@ -1,0 +1,9 @@
+flask
+matplotlib
+opencv-python
+plyfile
+trimesh>=2.35.39,<2.35.40
+networkx>=2.2,<2.3
+scipy
+# 3DETR and torch dependencies (user should install correct CUDA version)
+torch 
